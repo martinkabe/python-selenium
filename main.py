@@ -1,11 +1,12 @@
 import platform
-from flask import Flask, send_file
+from flask import Flask, send_file, request
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 import chromedriver_binary  # This adds chromedriver binary to path automatically
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 import time
 
@@ -14,10 +15,17 @@ import time
 app = Flask(__name__)
 
 
-@app.route("/")
-def hello_world():
+@app.route("/post_json", methods=['POST'])
+def process_json():
+
+    content_type = request.headers.get('Content-Type')
+    if (content_type == 'application/json'):
+        json = request.get_json()
+    else:
+        return 'Content-Type not supported!'
+
     options = webdriver.ChromeOptions()
-    options.add_argument("--headless")
+    # options.add_argument("--headless")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-infobars")
@@ -42,8 +50,16 @@ def hello_world():
         WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.ID, 'L2AGLb')))
         approve_element = driver.find_element(By.ID, 'L2AGLb')
         approve_element.click()
-        driver.save_screenshot("figures/spooky.png")
-        return send_file("figures/spooky.png")
+
+        WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.CLASS_NAME, 'gLFyf')))
+        input_element = driver.find_element(By.CLASS_NAME, "gLFyf")
+        input_element.clear()
+        input_element.send_keys(json['arg_1'] + Keys.ENTER)
+
+        WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.PARTIAL_LINK_TEXT, json['arg_1'])))
+
+        driver.save_screenshot("figures/snapshot.png")
+        return send_file("figures/snapshot.png")
     finally:
         driver.quit()  # Ensure the driver quits after the request
 
